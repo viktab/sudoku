@@ -41,6 +41,15 @@ hard2 = [[0, 0, 1, 5, 9, 0, 6, 0, 0],
 
 class Sudoku:
     def __init__(self, array):
+        """
+        rows: each list is a row (0 means empty)
+        cols: each list is a column
+        squares: each list is a square (squares read left to right then down
+                    but within a square indeces read top to bottom then right)
+        allowed: dict mapping each position to a set of numbers that can 
+                    still be placed there without breaking any rules. Empty set means 
+                    a number has been assigned to that position
+        """
         self.rows = array
         self.cols = [[],[],[],[],[],[],[],[],[]]
         for i in range(9):
@@ -62,6 +71,11 @@ class Sudoku:
                     self.allowed[(i, j)] = {1,2,3,4,5,6,7,8,9}
                     
     def pos_from_square(self, square, index):
+        """
+        square: which 3x3 square you're in
+        index: index within the square
+        returns: regular position coordinates (x, y)
+        """
         min_row = math.floor(square/3)*3
         min_col = (square%3)*3
         add_col = math.floor(index/3)
@@ -69,6 +83,12 @@ class Sudoku:
         return (min_col + add_col, min_row + add_row)
     
     def square_from_pos(self, pos):
+        """
+        pos: position you're in
+        returns
+        a: which 3x3 square the position is in
+        b: index of the position in said 3x3 square
+        """
         (i, j) = pos
         n = math.floor(j/3)
         m = math.floor(i/3)
@@ -77,6 +97,9 @@ class Sudoku:
         return a, b
                     
     def place_number(self, spot, num):
+        """ 
+        updates the sudoku object so that the given number num is assigned to the given spot
+        """
         (i, j) = spot
         self.rows[j][i] = num
         self.cols[i][j] = num
@@ -84,6 +107,11 @@ class Sudoku:
         self.squares[a][b] = num
     
     def assign_domains(self):
+        """
+        assign each spot in the game a set of numbers that it can be without breaking the 
+        rules of the game, given the current state of the board. If any domain is reduced to 
+        len 1, assign the remaining possible number to that spot
+        """
         for i in range(9):
             for j in range(9):
                 if self.rows[j][i] == 0:
@@ -95,9 +123,6 @@ class Sudoku:
                     square = self.squares[a]
                     remove = set([value for value in row if value != 0]).union([value for value in col if value != 0]).union([value for value in square if value != 0])
                     new_allowed = self.allowed[(i, j)].difference(remove)
-#                    print((i, j))
-#                    print(remove)
-#                    print(new_allowed)
                     if len(new_allowed) == 1:
                         self.place_number((i, j), list(new_allowed)[0])
                         self.allowed[(i, j)] = set()
@@ -105,25 +130,52 @@ class Sudoku:
                         self.allowed[(i, j)] = new_allowed
                         
     def check_squares(self):
+        """
+        For each 3x3 square in the game, check if any numbers only has 1 possible spot
+        that they can go in that square
+        """
         for a in range(8):
-            print(a)
-            print(self.squares[a])
-            missing_numbers = list({1,2,3,4,5,6,7,8,9}.difference(set(self.squares[a])))
             for num in range(9):
                 if num not in self.squares[a]:
-                    # print("num: " + str(num))
                     spots = 0
                     for b in range(9):
-                        # print(a, b)
                         pos = self.pos_from_square(a, b)
-                        print(pos, self.allowed[pos])
                         if num in self.allowed[pos]:
-                            print('plus 1')
                             spots += 1
                             spot = pos
-                    print(num, spots)
                     if spots == 1:
-                        print(a, b, num)
+                        self.place_number(spot, num)
+                        self.allowed[spot] = set()
+                        
+    def check_rows(self):
+        """
+        same functionality as check_squares, but check each row
+        """
+        for j in range(9):
+            for num in range(9):
+                if num not in self.rows[j]:
+                    spots = 0
+                    for i in range(9):
+                        if num in self.allowed[(i, j)]:
+                            spots += 1
+                            spot = (i, j)
+                    if spots == 1:
+                        self.place_number(spot, num)
+                        self.allowed[spot] = set()
+        
+    def check_cols(self):
+        """
+        same functionality as check_squares, but check each column
+        """
+        for i in range(9):
+            for num in range(9):
+                if num not in self.cols[i]:
+                    spots = 0
+                    for j in range(9):
+                        if num in self.allowed[(i, j)]:
+                            spots += 1
+                            spot = (i, j)
+                    if spots == 1:
                         self.place_number(spot, num)
                         self.allowed[spot] = set()
                         
@@ -137,10 +189,6 @@ class Sudoku:
                     if missing in self.allowed[pos]:
                         cols_allowed.add(pos[1])
                 if len(cols_allowed) == 1:
-#                    print('yeet')
-#                    print(a)
-#                    print(missing)
-#                    print(cols_allowed)
                     j = list(cols_allowed)[0]
                     for i in range(9):
                         square, z = self.square_from_pos((i, j))
@@ -149,16 +197,12 @@ class Sudoku:
     
     def check_blocked_rows(self):
         for a in range(2):
-            print('a: ' + str(a))
             missing_numbers = list({1,2,3,4,5,6,7,8,9}.difference(set(self.squares[a])))
             for missing in missing_numbers:
-                print("num: " + str(missing))
                 rows_allowed = set()
                 for b in range(9):
                     pos = self.pos_from_square(a, b)
-                    print(pos)
                     if missing in self.allowed[pos]:
-                        print("in pos: " + str(pos))
                         rows_allowed.add(pos[0])
                 if len(rows_allowed) == 1:
                     i = list(rows_allowed)[0]
@@ -166,9 +210,6 @@ class Sudoku:
                         square, z = self.square_from_pos((i, j))
                         if square != a and missing in self.allowed[(i, j)]:
                             self.allowed[(i, j)].remove(missing)
-                            print((i, j))
-                            print('allowed')
-                            print(self.allowed[(i, j)])
                         
     def start(self):
         prev = deepcopy(self.rows)
@@ -177,13 +218,14 @@ class Sudoku:
         while finding:
             self.assign_domains()
             self.check_squares()
+            self.check_rows()
+            self.check_cols()
             if prev == self.rows:
                 finding = False
             prev = deepcopy(self.rows)
             i += 1
-        print(self.allowed)
         print(self.rows)
-        print("after " + str(i) + " iteration(s) of checking for domains with only 1 number")
+        print("after " + str(i) + " iteration(s) of rule-based solving")
         # self.check_blocked_cols()
 #        self.check_blocked_rows()
 #        prev = deepcopy(self.rows)
