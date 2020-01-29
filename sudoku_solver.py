@@ -98,7 +98,7 @@ class Sudoku:
                     
     def place_number(self, spot, num):
         """ 
-        updates the sudoku object so that the given number num is assigned to the given spot
+        Updates the sudoku object so that the given number num is assigned to the given spot
         """
         (i, j) = spot
         self.rows[j][i] = num
@@ -108,7 +108,7 @@ class Sudoku:
     
     def assign_domains(self):
         """
-        assign each spot in the game a set of numbers that it can be without breaking the 
+        Assign each spot in the game a set of numbers that it can be without breaking the 
         rules of the game, given the current state of the board. If any domain is reduced to 
         len 1, assign the remaining possible number to that spot
         """
@@ -134,8 +134,8 @@ class Sudoku:
         For each 3x3 square in the game, check if any numbers only has 1 possible spot
         that they can go in that square
         """
-        for a in range(8):
-            for num in range(9):
+        for a in range(9):
+            for num in range(1, 10):
                 if num not in self.squares[a]:
                     spots = 0
                     for b in range(9):
@@ -149,10 +149,10 @@ class Sudoku:
                         
     def check_rows(self):
         """
-        same functionality as check_squares, but check each row
+        Same functionality as check_squares, but check each row
         """
         for j in range(9):
-            for num in range(9):
+            for num in range(1, 10):
                 if num not in self.rows[j]:
                     spots = 0
                     for i in range(9):
@@ -165,10 +165,10 @@ class Sudoku:
         
     def check_cols(self):
         """
-        same functionality as check_squares, but check each column
+        Same functionality as check_squares, but check each column
         """
         for i in range(9):
-            for num in range(9):
+            for num in range(1, 10):
                 if num not in self.cols[i]:
                     spots = 0
                     for j in range(9):
@@ -180,8 +180,14 @@ class Sudoku:
                         self.allowed[spot] = set()
                         
     def check_blocked_cols(self):
+        """
+        For each square, checks if there are any unassigned numbers that can
+        only possibly go in one column. If there are, removes that number from 
+        the remaining empty spots in that column in the other 3x3 squares
+        """
         for a in range(9):
             missing_numbers = list({1,2,3,4,5,6,7,8,9}.difference(set(self.squares[a])))
+            print(a, missing_numbers)
             for missing in missing_numbers:
                 cols_allowed = set()
                 for b in range(9):
@@ -196,7 +202,10 @@ class Sudoku:
                             self.allowed[(i, j)].remove(missing)
     
     def check_blocked_rows(self):
-        for a in range(2):
+        """
+        Similar functionality to check_blocked_cols, but checks for rows
+        """
+        for a in range(9):
             missing_numbers = list({1,2,3,4,5,6,7,8,9}.difference(set(self.squares[a])))
             for missing in missing_numbers:
                 rows_allowed = set()
@@ -212,6 +221,10 @@ class Sudoku:
                             self.allowed[(i, j)].remove(missing)
                         
     def start(self):
+        """
+        Iteratively checks each rule until no more 
+        checks can be done to reduce the problem
+        """
         prev = deepcopy(self.rows)
         finding = True
         i = 0
@@ -220,27 +233,14 @@ class Sudoku:
             self.check_squares()
             self.check_rows()
             self.check_cols()
+            self.check_blocked_cols()
+            self.check_blocked_rows()
             if prev == self.rows:
                 finding = False
             prev = deepcopy(self.rows)
             i += 1
         print(self.rows)
         print("after " + str(i) + " iteration(s) of rule-based solving")
-        # self.check_blocked_cols()
-#        self.check_blocked_rows()
-#        prev = deepcopy(self.rows)
-#        finding = True
-#        i = 0
-#        while finding:
-#            self.assign_domains()
-#            self.check_squares()
-#            if prev == self.rows:
-#                finding = False
-#            prev = deepcopy(self.rows)
-#            i += 1
-#        print(self.rows)
-#        print(i)
-#        print("after checking for blocked rows and columns")
         
         
 game = Sudoku(hard2)
