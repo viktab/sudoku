@@ -39,6 +39,16 @@ hard2 = [[0, 0, 1, 5, 9, 0, 6, 0, 0],
          [3, 7, 2, 4, 0, 0, 0, 1, 5],
          [1, 0, 0, 0, 0, 0, 0, 0, 0]]
 
+expert = [[0, 1, 0, 0, 7, 0, 0, 0, 0],
+          [5, 0, 2, 4, 0, 0, 0, 0, 0],
+          [0, 0, 0, 0, 0, 0, 4, 0, 0],
+          [3, 0, 0, 0, 0, 0, 0, 0, 0],
+          [0, 0, 7, 0, 0, 5, 3, 0, 8],
+          [0, 0, 8, 0, 0, 0, 9, 0, 0],
+          [0, 8, 0, 0, 1, 7, 5, 0, 3],
+          [0, 2, 0, 5, 0, 9, 0, 8, 0],
+          [1, 7, 0, 0, 0, 8, 0, 4, 0]]
+
 class Sudoku:
     def __init__(self, array):
         """
@@ -69,6 +79,13 @@ class Sudoku:
                     self.allowed[(i, j)] = set()
                 else:
                     self.allowed[(i, j)] = {1,2,3,4,5,6,7,8,9}
+                    
+    def copy(self):
+        """
+        Return a copy of itself
+        """
+        new_game = Sudoku(deepcopy(self.rows))
+        return new_game
                     
     def pos_from_square(self, square, index):
         """
@@ -105,6 +122,13 @@ class Sudoku:
         self.cols[i][j] = num
         a, b = self.square_from_pos(spot)
         self.squares[a][b] = num
+        
+    def unsolvable(self):
+        for pos in self.allowed:
+            i, j = pos
+            if len(self.allowed[pos]) == 0 and self.rows[j][i] == 0:
+                return True
+        return False
     
     def assign_domains(self):
         """
@@ -187,7 +211,6 @@ class Sudoku:
         """
         for a in range(9):
             missing_numbers = list({1,2,3,4,5,6,7,8,9}.difference(set(self.squares[a])))
-            print(a, missing_numbers)
             for missing in missing_numbers:
                 cols_allowed = set()
                 for b in range(9):
@@ -219,12 +242,22 @@ class Sudoku:
                         square, z = self.square_from_pos((i, j))
                         if square != a and missing in self.allowed[(i, j)]:
                             self.allowed[(i, j)].remove(missing)
-                        
-    def start(self):
+                
+    def solve(self):
         """
-        Iteratively checks each rule until no more 
-        checks can be done to reduce the problem
+        Main recursion function to solve the sudoku puzzle!
         """
+        
+        # base case - won
+        if not any(0 in x for x in self.rows):
+            return self.rows
+        
+        # base case - unsolvable
+        if self.unsolvable():
+            print(self.rows)
+            return None
+        
+        # check for rules 
         prev = deepcopy(self.rows)
         finding = True
         i = 0
@@ -242,7 +275,38 @@ class Sudoku:
         print(self.rows)
         print("after " + str(i) + " iteration(s) of rule-based solving")
         
+        # make a guess and place it
+        new_game = self.copy()
+        found = False
+        for square in range(9):
+            for num in range(1, 10):
+                if num not in self.squares[square]:
+                    possibilities = []
+                    for b in range(9):
+                        pos = self.pos_from_square(square, b)
+                        if num in self.allowed[pos]:
+                            possibilities.append(pos)
+                    if len(possibilities) == 2:
+                        p1 = possibilities[0]
+                        p2 = possibilities[1]
+                        number = num
+                        new_game.place_number(p1, number)
+                        found = True
+                        break
+            if found:
+                break
+                    
+        # recurse on the guess 
+        ans = new_game.solve()
         
-game = Sudoku(hard2)
-    
-game.start()
+        # if didn't work, try the other option
+        if ans is None:
+            new_game = self.copy()
+            new_game.place_number(p2, number)
+            ans = new_game.solve()
+        
+        return ans
+        
+        
+game = Sudoku(expert)
+print(game.solve())
